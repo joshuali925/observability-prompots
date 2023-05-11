@@ -1,11 +1,11 @@
-from typing import Any, List
+from typing import List
 from langchain.docstore.document import Document
-from langchain.document_loaders import DirectoryLoader, UnstructuredFileLoader
+from langchain.document_loaders import DirectoryLoader
 from langchain.text_splitter import CharacterTextSplitter
 
 # loads the documents and prepares them for embedding
-from json_loader import JSONLoader
-from web_loder import WebBaseLoader
+# from json_loader import JSONLoader
+# from web_loder import WebBaseLoader
 
 
 def loadDocuments() -> List[Document]:
@@ -22,22 +22,25 @@ def loadDocuments() -> List[Document]:
     for doc in loader.load():
         documents.append(doc)
 
+    # loader = DirectoryLoader("../jaeger_ppl")
+    # for doc in loader.load():
+    #     documents.append(doc)
+
     # load ppl samples queries
     loader = DirectoryLoader("../prompts", glob="**/*.txt")
     for doc in loader.load():
         documents.append(doc)
 
-    # load ppl samples queries
-    loader = DirectoryLoader("../samples", glob="**/*.txt")
-    for doc in loader.load():
-        documents.append(doc)
+    # # load ppl samples queries
+    # loader = DirectoryLoader("../samples", glob="**/*.txt")
+    # for doc in loader.load():
+    #     documents.append(doc)
 
-    # load O/S queries responses
-    loader = DirectoryLoader("../queries", glob="**/*.txt")
-    for doc in loader.load():
-        documents.append(doc)
+    # # load O/S queries responses
+    # loader = DirectoryLoader("../queries", glob="**/*.txt")
+    # for doc in loader.load():
+    #     documents.append(doc)
 
     # split content
     text_splitter = CharacterTextSplitter(chunk_size=1000, chunk_overlap=0)
     return text_splitter.split_documents(documents)
-
