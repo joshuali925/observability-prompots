@@ -17,19 +17,19 @@ def loadDocuments() -> List[Document]:
     # loader = DirectoryLoader('spec', glob="**/*.md")
     documents = []
 
-    # load all documentation from opensearch docs/blogs
-    loader = DirectoryLoader("../static_data", glob="**/*.md")
-    for doc in loader.load():
-        documents.append(doc)
-
-    # loader = DirectoryLoader("../jaeger_ppl")
+    # # load all documentation from opensearch docs/blogs
+    # loader = DirectoryLoader("../static_data", glob="**/*.md")
     # for doc in loader.load():
     #     documents.append(doc)
 
-    # load ppl samples queries
-    loader = DirectoryLoader("../prompts", glob="**/*.txt")
+    loader = DirectoryLoader("../jaeger_ppl")
     for doc in loader.load():
         documents.append(doc)
+
+    # # load ppl samples queries
+    # loader = DirectoryLoader("../prompts", glob="**/*.txt")
+    # for doc in loader.load():
+    #     documents.append(doc)
 
     # # load ppl samples queries
     # loader = DirectoryLoader("../samples", glob="**/*.txt")

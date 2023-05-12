@@ -1,4 +1,7 @@
-from fastapi import FastAPI, Body
+import os
+
+from dotenv import load_dotenv
+from fastapi import Body, FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from langchain.callbacks.base import CallbackManager
 from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
@@ -6,60 +9,123 @@ from langchain.chains import ChatVectorDBChain, ConversationalRetrievalChain
 from langchain.chains.chat_vector_db.prompts import CONDENSE_QUESTION_PROMPT
 from langchain.chains.llm import LLMChain
 from langchain.chains.question_answering import load_qa_chain
+from langchain.chains.qa_with_sources import load_qa_with_sources_chain
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.llms import OpenAI
-import os
-from dotenv import load_dotenv
-
-#   chat prompt
+from langchain.output_parsers import ResponseSchema, StructuredOutputParser
+from langchain.prompts import PromptTemplate
 from langchain.prompts.chat import (
     ChatPromptTemplate,
-    SystemMessagePromptTemplate,
     HumanMessagePromptTemplate,
+    SystemMessagePromptTemplate,
 )
 from langchain.vectorstores import Chroma
 
-
-# Web Server.gitignore
 from load_utils import loadDocuments
 
-vectorstore_directory = (
-    os.path.dirname(os.path.realpath(__file__)) + "/chroma_vector_store"
-)
-
 load_dotenv()  # Load environment variables from the .env file
-app = FastAPI()
 
-# Enable CORS
+app = FastAPI()
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # You can customize this to allow specific origins
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-# chat history list
 chat_history = []
+vectorstore_directory = (
+    os.path.dirname(os.path.realpath(__file__)) + "/chroma_vector_store"
+)
 
-# default prompt
-system_template = """Use the following pieces of context to answer the users question.
-If you don't know the answer, just say that you don't know, don't try to make up an answer.
-In any conversation only return the minimal response that answers exactly the requested question without adding any additional information or explanations.
-When asked a question always try to match it with a Conversation Template - and answer that the scenario is described in the specific template
+system_template = """
+You will be given a question about some Jaeger service information from a user.
+Use context provided to write a PPL query that can be used to retrieve the information.
+Do not write SQL queries. Respond PPL query only, do not output comments.
 
 ----------------
-{context}"""
+Here are some sample questions for information about Jaeger services and the PPL query to retrieve the information
+
+What is the throughput of each service?
+source=jaeger-span* | stats count() by process.serviceName
+
+What is the number of spans of service `loadgenerator`?
+source=jaeger-span* | where process.serviceName = 'loadgenerator' | stats count()
+
+What is the number of spans of service load generator per second?
+source=jaeger-span* | where process.serviceName = 'loadgenerator' | stats count() by span('startTime', 1s)
+
+What is the average latency of spans in each service?
+source=jaeger-span* | stats avg(duration) by process.serviceName
+
+What is the current average latency of spans in each service?
+source=jaeger-span* | where startTime >= 'now-5m' | stats avg(duration) by process.serviceName
+
+What is the average latency of spans by service and operation name?
+source=jaeger-span* | stats avg(duration) by process.serviceName, operationName
+
+What is the average latency of spans in every 5 minutes intervals?
+source=jaeger-span* | stats avg(duration) by span('startTime', 5m)
+
+What is the average latency of spans of service `frontend`?
+source=jaeger-span* | where process.serviceName = 'frontend' | stats avg(duration)
+
+What are some services with latency over 1 second?
+source=jaeger-span* | where duration > 1000000 | stats count() by process.serviceName
+
+What are some spanIDs with latency over 1 second for the load generator service
+source=jaeger-span* | where duration > 1000000 and process.serviceName = 'loadgenerator' | fields spanID
+
+What are some services with errors?
+source=jaeger-span* | where status.code > 0 | stats count() by process.serviceName
+
+What are some spans with errors for the accounting service
+source=jaeger-span* | where status.code > 0 and process.serviceName = 'accounting' | fields SpanID
+
+What are the top 5 services with errors?
+source=jaeger-span* | where status.code > 0 | stats count() as errors by process.serviceName | sort - errors
+
+What are the top 5 spans with least latency?
+source=jaeger-span* | sort duration | head 5 | fields spanID
+
+---------------
+
+{context}
+
+Could you use the above examples to write a PPL query for answering the next question.
+"""
+
 messages = [
     SystemMessagePromptTemplate.from_template(system_template),
     HumanMessagePromptTemplate.from_template("{question}"),
 ]
 prompt = ChatPromptTemplate.from_messages(messages)
 
+# response_schemas = [
+#     ResponseSchema(
+#         name="query",
+#         description="This is the PPL Query that can be used to query information requested",
+#     ),
+# ]
+# output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+# format_instructions = output_parser.get_format_instructions()
+
+# prompt = ChatPromptTemplate(
+#     messages=[
+#         SystemMessagePromptTemplate.from_template(system_template),
+#         HumanMessagePromptTemplate.from_template(user_template),
+#     ],
+#     input_variables=["question"],
+#     partial_variables={"format_instructions": format_instructions},
+# )
+
+embeddings = OpenAIEmbeddings()
+
 if os.path.exists(vectorstore_directory):
     print("reading persisted vectorstore")
     vectorstore = Chroma(
-        persist_directory=vectorstore_directory, embedding_function=OpenAIEmbeddings()
+        persist_directory=vectorstore_directory, embedding_function=embeddings
     )
 
 else:
@@ -68,12 +134,12 @@ else:
     print("loading documents")
     documents = loadDocuments()
     if len(documents) == 0:
-        print('❗documents:', documents)
+        print("❗no documents loaded, exiting")
         exit(1)
 
     # # vector store generation using embedding
     vectorstore = Chroma.from_documents(
-        documents, OpenAIEmbeddings(), persist_directory=vectorstore_directory
+        documents, embeddings, persist_directory=vectorstore_directory
     )
     vectorstore.persist()
 
@@ -86,8 +152,8 @@ streaming_llm = ChatOpenAI(
 
 # lang chain `staff` chain type
 llm = OpenAI(temperature=1e-10)
-question_generator = LLMChain(llm=llm, prompt=CONDENSE_QUESTION_PROMPT)
 
+# question_generator = LLMChain(llm=llm, prompt=CONDENSE_QUESTION_PROMPT)
 # chat vector chain
 # qa = ChatVectorDBChain(
 #     vectorstore=vectorstore,
@@ -97,19 +163,25 @@ question_generator = LLMChain(llm=llm, prompt=CONDENSE_QUESTION_PROMPT)
 
 retriever = vectorstore.as_retriever()
 qa = ConversationalRetrievalChain.from_llm(
-    streaming_llm, retriever, qa_prompt=prompt, chain_type="stuff"
+    streaming_llm,
+    retriever,
+    qa_prompt=prompt,
+    chain_type="stuff",
+    return_source_documents=True,
+    verbose=True,
 )
-
 
 chat_history = []
 while True:
-    question = input("question: ")
-    result = qa(
-        {"question": question, "chat_history": chat_history}, return_only_outputs=True
-    )
-    chat_history.append((question, result))
-    vectorstore.add_texts(texts=[question, result])
-    print(result)
+    print("\n=======================================================")
+    question = input("Question: ")
+    result = qa({"question": question, "chat_history": chat_history})
+    chat_history.append((question, result["answer"]))
+    # vectorstore.add_texts(texts=[question, result["answer"]])
+    print("\n❗source used:")
+    for document in result["source_documents"]:
+        print(document.metadata)
+        print(document.page_content + "\n")
 
 # @app.post("/question")
 # async def question(query: str = Body(...)):

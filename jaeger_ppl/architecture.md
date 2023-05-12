@@ -1,4 +1,4 @@
-The following doc contains architecture of microservices
+The following doc contains architecture of microservices for the OTEL demo
 
 ---
 title: Demo Architecture

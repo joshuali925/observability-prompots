@@ -1,4 +1,6 @@
-// The following code contains the schema for Jaeger spans index "jaeger-spans"
+// The following golang code contains the schema for Jaeger spans index "jaeger-spans"
+
+// https://github.com/jaegertracing/jaeger/blob/main/model/json/model.go
 
 package json
 
