@@ -8,8 +8,8 @@ from langchain.callbacks.streaming_stdout import StreamingStdOutCallbackHandler
 from langchain.chains import ChatVectorDBChain, ConversationalRetrievalChain
 from langchain.chains.chat_vector_db.prompts import CONDENSE_QUESTION_PROMPT
 from langchain.chains.llm import LLMChain
-from langchain.chains.question_answering import load_qa_chain
 from langchain.chains.qa_with_sources import load_qa_with_sources_chain
+from langchain.chains.question_answering import load_qa_chain
 from langchain.chat_models import ChatOpenAI
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.llms import OpenAI
@@ -39,10 +39,18 @@ vectorstore_directory = (
     os.path.dirname(os.path.realpath(__file__)) + "/chroma_vector_store"
 )
 
+response_schemas = [
+    ResponseSchema(
+        name="query",
+        description="This is the PPL Query that can be used to query information requested",
+    ),
+]
+output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
+format_instructions = output_parser.get_format_instructions()
+
 system_template = """
 You will be given a question about some Jaeger service information from a user.
 Use context provided to write a PPL query that can be used to retrieve the information.
-Do not write SQL queries. Respond PPL query only, do not output comments.
 
 ----------------
 Here are some sample questions for information about Jaeger services and the PPL query to retrieve the information
@@ -92,8 +100,6 @@ source=jaeger-span* | sort duration | head 5 | fields spanID
 ---------------
 
 {context}
-
-Could you use the above examples to write a PPL query for answering the next question.
 """
 
 messages = [
@@ -102,19 +108,10 @@ messages = [
 ]
 prompt = ChatPromptTemplate.from_messages(messages)
 
-# response_schemas = [
-#     ResponseSchema(
-#         name="query",
-#         description="This is the PPL Query that can be used to query information requested",
-#     ),
-# ]
-# output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
-# format_instructions = output_parser.get_format_instructions()
-
 # prompt = ChatPromptTemplate(
 #     messages=[
 #         SystemMessagePromptTemplate.from_template(system_template),
-#         HumanMessagePromptTemplate.from_template(user_template),
+#         HumanMessagePromptTemplate.from_template("{question}"),
 #     ],
 #     input_variables=["question"],
 #     partial_variables={"format_instructions": format_instructions},
@@ -127,7 +124,6 @@ if os.path.exists(vectorstore_directory):
     vectorstore = Chroma(
         persist_directory=vectorstore_directory, embedding_function=embeddings
     )
-
 else:
     # Construct a ConversationalRetrievalChain with a streaming llm for combine
     # docs and a separate, non-streaming llm for question generation
@@ -147,24 +143,20 @@ streaming_llm = ChatOpenAI(
     streaming=True,
     callback_manager=CallbackManager([StreamingStdOutCallbackHandler()]),
     verbose=True,
-    temperature=0.5,
+    temperature=0,
 )
 
-# lang chain `staff` chain type
-llm = OpenAI(temperature=1e-10)
-
-# question_generator = LLMChain(llm=llm, prompt=CONDENSE_QUESTION_PROMPT)
-# chat vector chain
-# qa = ChatVectorDBChain(
-#     vectorstore=vectorstore,
-#     combine_docs_chain=doc_chain,
-#     question_generator=question_generator,
+# qa = ConversationalRetrievalChain(
+#     retriever=vectorstore.as_retriever(),
+#     question_generator=LLMChain(llm=OpenAI(temperature=1e-10), prompt=CONDENSE_QUESTION_PROMPT),
+#     combine_docs_chain=load_qa_with_sources_chain(streaming_llm, chain_type="map_reduce"),
+#     return_source_documents=True,
+#     verbose=True,
 # )
 
-retriever = vectorstore.as_retriever()
 qa = ConversationalRetrievalChain.from_llm(
-    streaming_llm,
-    retriever,
+    llm=streaming_llm,
+    retriever=vectorstore.as_retriever(),
     qa_prompt=prompt,
     chain_type="stuff",
     return_source_documents=True,
