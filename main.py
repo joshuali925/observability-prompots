@@ -80,19 +80,28 @@ doc_chain = load_qa_chain(streaming_llm, chain_type="stuff", prompt=prompt)
 
 # chat vector chain
 qa = ConversationalRetrievalChain(
-    vectorstore=vectorstore,
+    retriever=vectorstore.as_retriever(),
     combine_docs_chain=doc_chain,
     question_generator=question_generator,
+    return_source_documents=True,
+    verbose=True,
 )
 
 
 @app.post("/question")
 async def question(query: str = Body(...)):
     global chat_history  # Declare chat_history as a global variable
-    result = qa(
-        {"question": query, "chat_history": chat_history}, return_only_outputs=True
-    )
+    result = qa({"question": query, "chat_history": chat_history})
 
     chat_history.append((query, result["answer"]))
     vectorstore.add_texts(texts=[query, result["answer"]])
+    print("\nsource used:")
+    for document in result["source_documents"]:
+        print(document.metadata)
+        print(document.page_content + "\n")
     return result
+
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(app, host="0.0.0.0", port=8000)
