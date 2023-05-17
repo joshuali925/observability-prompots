@@ -18,7 +18,11 @@ Use context provided to write a PPL query that can be used to retrieve the infor
 ----------------
 Here are some sample questions and the PPL query to retrieve the information.
 [index] is a placeholder for index name, [field] is a placeholder for a field name, [value] is a placeholder for a field value.
-Replace them with actual values from the question.
+Before you write the query, use the following steps to get placeholder values:
+
+1. Use a tool to get value for [index]
+2. use a tool to get value for [field]
+3. use a tool to get value for [value]
 
 Query to get the throughput of each [field]?
 source=[index] | stats count() by [field]
@@ -64,21 +68,34 @@ source=[index] | sort [field] | head 5 | fields [field]
 
 ---------------
 
-Do not provide comments, only output the PPL query.
-
-Before you write the query, use tools to get the placeholder values.
-
 You have access to the following tools:"""
 
+
+suffix = """Begin!"
+
+{chat_history}
+Question: {input}
+{agent_scratchpad}"""
 
 tools = create_tools()
 memory = ConversationBufferMemory(memory_key="chat_history")
 
-
-prompt = ZeroShotAgent.create_prompt(tools, prefix=prefix)
+prompt = ZeroShotAgent.create_prompt(
+    tools,
+    prefix=prefix,
+    suffix=suffix,
+    input_variables=["input", "chat_history", "agent_scratchpad"],
+)
 
 llm_chain = LLMChain(llm=BaseModel().get_model(), prompt=prompt)
-agent = ZeroShotAgent(llm_chain=llm_chain, tools=tools, verbose=True)
-agent_chain = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
+agent = ZeroShotAgent(llm_chain=llm_chain)
+agent_chain = AgentExecutor.from_agent_and_tools(
+    agent=agent,
+    tools=tools,
+    verbose=True,
+    max_iterations=2,
+    early_stopping_method="generate",
+    memory=memory,
+)
 
-agent_chain.run(input="what is the average latency of service load generator?")
+agent_chain.run(input="what is the average latency of Fraud Detection Service?")

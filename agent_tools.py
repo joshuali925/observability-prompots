@@ -65,7 +65,8 @@ summarize_text_chain = LLMChain(
 otel_tool = Tool(
     name="OTEL Demo knowledge",
     func=otel_knowledge.run,
-    description="useful for when you need to answer question about the OTEL Demo Architecture",
+    # description="useful for when you need to answer question about the OTEL Demo Architecture",
+    description="useful for when you need to answer question about the OTEL Demo Architecture. The tool takes natural language of the placeholder descriptions",
 )
 
 
