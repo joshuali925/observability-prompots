@@ -6,6 +6,7 @@ from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
 from langchain.utilities import GoogleSearchAPIWrapper
 
 from agent_tools import create_tools, otel_knowledge
+from base_llm import BaseModel
 
 __import__("dotenv").load_dotenv()
 
@@ -65,30 +66,19 @@ source=[index] | sort [field] | head 5 | fields [field]
 
 Do not provide comments, only output the PPL query.
 
-Before you write the query, use the OTEL Demo knowledge tool to first to get all the field names.
+Before you write the query, use tools to get the placeholder values.
 
 You have access to the following tools:"""
 
 
-suffix = """Begin!"
-
-{chat_history}
-Question: {input}
-{agent_scratchpad}"""
-
 tools = create_tools()
 memory = ConversationBufferMemory(memory_key="chat_history")
 
-prompt = ZeroShotAgent.create_prompt(
-    tools,
-    prefix=prefix,
-    suffix=suffix,
-    input_variables=["input", "chat_history", "agent_scratchpad"],
-)
 
-llm_chain = LLMChain(llm=ChatAnthropic(temperature=0), prompt=prompt)
+prompt = ZeroShotAgent.create_prompt(tools, prefix=prefix)
+
+llm_chain = LLMChain(llm=BaseModel().get_model(), prompt=prompt)
 agent = ZeroShotAgent(llm_chain=llm_chain, tools=tools, verbose=True)
-agent_chain = AgentExecutor.from_agent_and_tools(
-    agent=agent, tools=tools, verbose=True, memory=memory
-)
+agent_chain = AgentExecutor.from_agent_and_tools(agent=agent, tools=tools, verbose=True)
+
 agent_chain.run(input="what is the average latency of service load generator?")
