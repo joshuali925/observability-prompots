@@ -1,0 +1,85 @@
+[
+  {
+    "instruction": "What is the throughput of each service?",
+    "input": "",
+    "output": "source=jaeger-span* | stats count() by process.serviceName"
+  },
+
+  {
+    "instruction": "What is the number of spans of service `loadgenerator`?",
+    "input": "",
+    "output": "source=jaeger-span* | where process.serviceName = 'loadgenerator' | stats count()"
+  },
+
+  {
+    "instruction": "What is the number of spans of service load generator per second?",
+    "input": "",
+    "output": "source=jaeger-span* | where process.serviceName = 'loadgenerator' | stats count() by span('startTime', 1s)"
+  },
+
+  {
+    "instruction": "What is the average latency of spans in each service?",
+    "input": "",
+    "output": "source=jaeger-span* | stats avg(duration) by process.serviceName"
+  },
+
+  {
+    "instruction": "What is the current average latency of spans in each service?",
+    "input": "",
+    "output": "source=jaeger-span* | where startTime >= 'now-5m' | stats avg(duration) by process.serviceName"
+  },
+
+  {
+    "instruction": "What is the average latency of spans by service and operation name?",
+    "input": "",
+    "output": "source=jaeger-span* | stats avg(duration) by process.serviceName, operationName"
+  },
+
+  {
+    "instruction": "What is the average latency of spans in every 5 minutes intervals?",
+    "input": "",
+    "output": "source=jaeger-span* | stats avg(duration) by span('startTime', 5m)"
+  },
+
+  {
+    "instruction": "What is the average latency of spans of service `frontend`?",
+    "input": "",
+    "output": "source=jaeger-span* | where process.serviceName = 'frontend' | stats avg(duration)"
+  },
+
+  {
+    "instruction": "What are some services with latency over 1 second?",
+    "input": "",
+    "output": "source=jaeger-span* | where duration > 1000000 | stats count() by process.serviceName"
+  },
+
+  {
+    "instruction": "What are some spanIDs with latency over 1 second for the load generator service",
+    "input": "",
+    "output": "source=jaeger-span* | where duration > 1000000 and process.serviceName = 'loadgenerator' | fields spanID"
+  },
+
+  {
+    "instruction": "What are some services with errors?",
+    "input": "",
+    "output": "source=jaeger-span* | where status.code > 0 | stats count() by process.serviceName"
+  },
+
+  {
+    "instruction": "What are some spans with errors for the accounting service",
+    "input": "",
+    "output": "source=jaeger-span* | where status.code > 0 and process.serviceName = 'accounting' | fields SpanID"
+  },
+
+  {
+    "instruction": "What are the top 5 services with errors?",
+    "input": "",
+    "output": "source=jaeger-span* | where status.code > 0 | stats count() as errors by process.serviceName | sort - errors"
+  },
+
+  {
+    "instruction": "What are the top 5 spans with least latency?",
+    "input": "",
+    "output": "source=jaeger-span* | sort duration | head 5 | fields spanID"
+  }
+]
