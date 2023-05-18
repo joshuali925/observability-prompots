@@ -169,3 +169,4 @@ cython_debug/
 #.idea/
 
 /chroma_vector_store/
+/models/
