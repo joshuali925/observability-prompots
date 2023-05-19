@@ -11,7 +11,6 @@ from langchain.llms import LlamaCpp
 from langchain.llms import HuggingFacePipeline
 from langchain.llms.base import LLM
 import requests
-
 from transformers import (
     AutoModelForCausalLM,
     AutoModelForSeq2SeqLM,
@@ -31,7 +30,7 @@ class BaseModel:
     llm = None
     embeddings = None
 
-    def __init__(self, model_name="claude"):
+    def __init__(self, model_name="webui"):
         if model_name == "openai":
             self.llm = OpenAI(temperature=0)
             self.embeddings = OpenAIEmbeddings()
@@ -46,7 +45,7 @@ class BaseModel:
             self.llm = ChatAnthropic(temperature=0.7)
             # https://www.sbert.net/docs/pretrained_models.html
             # self.embeddings = HuggingFaceHubEmbeddings(repo_id="sentence-transformers/gtr-t5-xxl")
-            self.embeddings = HuggingFaceEmbeddings(model_name="gtr-t5-xl")
+            self.embeddings = HuggingFaceEmbeddings()
 
         elif model_name == "llamaCpp":
             model_path = "./models/ggml-model-q4_0.bin"
@@ -86,6 +85,21 @@ class BaseModel:
         return self.embeddings
 
 
+outputs = [
+    """
+Here is a step-by-step process to answer the question:
+Question: What is the average latency of Fraud Detection Service?
+Thought: I need the index name that contains latency data
+Action: Schema knowledge
+Action Input: Latency data
+""",
+    """
+Thought: I can now construct the PPL query to retrieve the average latency of the Fraud Detection Service.
+Final Answer: source='jaeger-span-*' | where process.serviceName = 'frauddetection' | stats avg(duration)
+""",
+]
+
+
 # https://github.com/ChobPT/oobaboogas-webui-langchain_agent/blob/0fb15464869ce59d9b48bae5415d6a573a03ac5f/script.py#L179
 class WebuiLLM(LLM):
     @property
@@ -93,8 +107,17 @@ class WebuiLLM(LLM):
         return "custom"
 
     def _call(self, prompt: str, stop: Optional[List[str]] = None) -> str:
+        print('❗stop:', stop)
         print("❗prompt is")
         print(prompt)
+        print("===================== prompt end =======================")
+        if len(outputs) > 0:
+            print("reading output")
+            return outputs.pop(0)
+        else:
+            print("no more outputs. exiting.")
+            exit(0)
+
         response = requests.post(
             "http://localhost:5000/api/v1/generate",
             json={
@@ -117,7 +140,7 @@ class WebuiLLM(LLM):
                 "truncation_length": 2048,
                 "ban_eos_token": False,
                 "skip_special_tokens": False,
-                "stopping_strings": ["\n\n", "Observation:"],
+                "stopping_strings": stop,
             },
         )
 
