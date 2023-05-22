@@ -1,0 +1,44 @@
+Give me some documents in index 'accounts'
+source=`accounts`
+
+Give me 10 documents in index 'accounts'
+source=`accounts` | head 10
+
+Give me 5 oldest people in index 'accounts'
+source=`accounts` | sort - age | head 5
+
+Give me first names of 5 youngest people in index 'accounts'
+source=`accounts` | sort age | head 5 | fields `firstname`
+
+Give me some addresses in index 'accounts'. field for addresses is 'address'
+source=`accounts` | fields `address`
+
+Find the document in index 'accounts' where firstname is 'Hattie'
+source=`accounts` | where `firstname` = 'Hattie'
+
+Find the document in index 'accounts' where firstname is 'Hattie' or lastname is 'Frank'
+source=`accounts` | where `firstname` = 'Hattie' or `lastname` = 'frank'
+
+Find the document in index 'accounts' where firstname is not 'Hattie' and lastname is not 'Frank'
+source=`accounts` | where `firstname` != 'Hattie' and `lastname` != 'frank'
+
+Count the number of documents in index 'accounts'
+source=`accounts` | stats count()
+
+Count the number of people with firstname 'Amber' in index 'accounts'
+source=`accounts` | where `firstname`='Amber' | stats count()
+
+How many people are older than 33? index is 'accounts', age fields is 'age'
+source=`accounts` | where `age` > 33 | stats count()
+
+How many males and females in index 'accounts'? gender fields is 'gender'
+source=`accounts` | stats count() by `gender`
+
+What is the average age in 'accounts' index?
+source=`accounts` | stats avg(`age`)
+
+What is the minimum age in 'accounts' index?
+source=`accounts` | stats min(`age`)
+
+What is the maximum age in 'accounts' index?
+source=`accounts` | stats max(`age`)
