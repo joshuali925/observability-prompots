@@ -30,7 +30,7 @@ class BaseModel:
     llm = None
     embeddings = None
 
-    def __init__(self, model_name="webui"):
+    def __init__(self, model_name="claude"):
         if model_name == "openai":
             self.llm = OpenAI(temperature=0)
             self.embeddings = OpenAIEmbeddings()
@@ -42,7 +42,7 @@ class BaseModel:
             self.embeddings = HuggingFaceHubEmbeddings()
 
         elif model_name == "claude":
-            self.llm = ChatAnthropic(temperature=0.7)
+            self.llm = ChatAnthropic(temperature=0.1)
             # https://www.sbert.net/docs/pretrained_models.html
             # self.embeddings = HuggingFaceHubEmbeddings(repo_id="sentence-transformers/gtr-t5-xxl")
             self.embeddings = HuggingFaceEmbeddings()
@@ -87,11 +87,11 @@ class BaseModel:
 
 outputs = [
     """
-Here is a step-by-step process to answer the question:
-Question: What is the average latency of Fraud Detection Service?
-Thought: I need the index name that contains latency data
-Action: Schema knowledge
-Action Input: Latency data
+Here is the thought process to answer the question:
+Question: what is the average latency of Fraud Detection Service? field for latency is 'duration', field for service is 'process.serviceName', value for Fraud Detection Service is 'frauddetectionservice', index is 'jaeger-span-*'
+Thought: I need to construct a PPL query to get the average latency for Fraud Detection Service
+Action: Execute PPL Query Action Input: source=jaeger-span-* | where process.serviceName = 'frauddetectionservice' | stats avg(duration)
+
 """,
     """
 Thought: I can now construct the PPL query to retrieve the average latency of the Fraud Detection Service.

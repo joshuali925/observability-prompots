@@ -1,9 +1,11 @@
 const fs = require("fs");
 
 const dataDir = `${__dirname}/data`;
+const outputDir = `${__dirname}/output`;
 
 const writeFile = (obj) => {
-  fs.writeFileSync(`${dataDir}/ppl_samples.json`, JSON.stringify(obj, null, 2));
+  fs.mkdirSync(outputDir, { recursive: true });
+  fs.writeFileSync(`${outputDir}/ppl_samples.json`, JSON.stringify(obj, null, 2));
 };
 
 const lines = fs

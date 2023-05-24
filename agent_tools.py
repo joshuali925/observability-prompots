@@ -79,7 +79,7 @@ def create_tools():
         # ),
         Tool(
             name="Execute PPL Query",
-            func=lambda ppl_query: execute_ppl_query(ppl_query),
+            func=lambda ppl_query: exit(0),  # execute_ppl_query(ppl_query),
             description="useful for when you need to execute the OpenSearch PPL Query. This tool takes PPL Query as the input",
         ),
         # Tool(

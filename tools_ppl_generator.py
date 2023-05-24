@@ -1,5 +1,5 @@
 from langchain import LLMChain, PromptTemplate
-from langchain.agents import AgentExecutor, Tool, ZeroShotAgent
+from langchain.agents import AgentExecutor, Tool, ZeroShotAgent, ConversationalChatAgent
 from langchain.chat_models import ChatAnthropic, ChatOpenAI
 from langchain.llms import Anthropic, OpenAI
 from langchain.memory import ConversationBufferMemory, ReadOnlySharedMemory
@@ -36,8 +36,8 @@ source=`accounts` | fields `address`
 Find the document in index 'accounts' where firstname is 'Hattie'
 source=`accounts` | where `firstname` = 'Hattie'
 
-Find the document in index 'accounts' where firstname is 'Hattie' or lastname is 'Frank'
-source=`accounts` | where `firstname` = 'Hattie' or `lastname` = 'frank'
+Find the emails in index 'accounts' where firstname is 'Hattie' or lastname is 'Frank'. email field is 'email'
+source=`accounts` | where `firstname` = 'Hattie' or `lastname` = 'frank' | fields `email`
 
 Find the document in index 'accounts' where firstname is not 'Hattie' and lastname is not 'Frank'
 source=`accounts` | where `firstname` != 'Hattie' and `lastname` != 'frank'
@@ -54,19 +54,22 @@ source=`accounts` | where `age` > 33 | stats count()
 How many males and females in index 'accounts'? gender fields is 'gender'
 source=`accounts` | stats count() by `gender`
 
-What is the average age in 'accounts' index?
-source=`accounts` | stats avg(`age`)
+What is the average, minimum, maximum age in 'accounts' index?
+source=`accounts` | stats avg(`age`), min(`age`), max(`age`)
 
-What is the minimum age in 'accounts' index?
-source=`accounts` | stats min(`age`)
+Show all states sorted by average balance. balance field is 'balance', states field is 'state', index is 'accounts'
+source=`accounts` | stats avg(`balance`) as avg_balance by `state` | sort avg_balance
 
-What is the maximum age in 'accounts' index?
-source=`accounts` | stats max(`age`)
+What is the average price of products ordered in the last 7 days? price field is 'taxful_total_price', ordered date field is 'order_date', index is 'opensearch_dashboards_sample_data_ecommerce', current time is '2023-04-02 02:47:19'
+source=`opensearch_dashboards_sample_data_ecommerce` | where `order_date` < DATE_SUB(TIMESTAMP('2023-04-02 02:47:19'), INTERVAL 7 DAY) | stats avg(`taxful_total_price`) as avg_price
+
+What is the average price of products ordered in the last 24 hours by every 2 hours? price field is 'taxful_total_price', ordered date field is 'order_date', index is 'opensearch_dashboards_sample_data_ecommerce', current time is '2023-05-23 17:16:25'
+source=`opensearch_dashboards_sample_data_ecommerce` | where `order_date` < DATE_SUB(TIMESTAMP('2023-05-23 17:16:25'), INTERVAL 24 HOUR) | stats avg(`taxful_total_price`) as avg_price by span(order_date, 2h)
 
 ---------------
 
 You have access to the following tools:
-"""
+""".strip()
 
 
 suffix = """
@@ -74,7 +77,7 @@ Begin!
 
 {chat_history}
 Question: {input}
-{agent_scratchpad}"""
+{agent_scratchpad}""".strip()
 
 tools = create_tools()
 memory = ConversationBufferMemory(memory_key="chat_history")
@@ -97,4 +100,8 @@ agent_chain = AgentExecutor.from_agent_and_tools(
     memory=memory,
 )
 
-agent_chain.run(input="what is the average latency of Fraud Detection Service? field for latency is 'duration', field for service is 'process.serviceName', value for Fraud Detection Service is 'frauddetectionservice', index is 'jaeger-span-*'")
+agent_chain.run(input="How many requests are being processed by the payment service per second? field for timestamp is 'startTime', field for service is 'process.serviceName', value for payment service is 'payment', index is 'jaeger-span-*'")
+# agent_chain.run(input="What is the average latency of Fraud Detection Service? field for spans is 'spanID', field for latency is 'duration', field for service is 'process.serviceName', value for Fraud Detection Service is 'frauddetectionservice', index is 'jaeger-span-*'")
+# agent_chain.run(input="How many spans has errors in Fraud Detection Service? field for errors is 'tag.error', field for latency is 'duration', field for service is 'process.serviceName', value for Fraud Detection Service is 'frauddetectionservice', index is 'jaeger-span-*'")
+# agent_chain.run(input="What is the average response time of some log with errors? field for error is 'status.code', field for response time is 'latency', index is 'sample_data_logs'")
+# agent_chain.run(input="Show all Carriers sorted by average delay. field for Carriers is 'Carrier', field for delay is 'FlightDelayMin', index is 'opensearch_dashboards_sample_data_flights'")
