@@ -24,7 +24,7 @@ def loadDocuments() -> List[Document]:
     return text_splitter.split_documents(documents)
 
 
-def create_vector_store(embeddings=BaseModel().get_embeddings()):
+def create_vector_store(embeddings=BaseModel(model_name="openai").get_embeddings()):
     if os.path.exists(vectorstore_directory):
         print("reading persisted vectorstore")
         vectorstore = Chroma(

@@ -15,7 +15,7 @@ from ingest import create_vector_store
 load_dotenv()
 
 # Base model used by all tools
-basemodel = BaseModel()
+basemodel = BaseModel(model_name="openai")
 llm = basemodel.get_model()
 
 
@@ -68,7 +68,7 @@ def create_tools():
         Tool(
             name="OTEL Demo knowledge",
             func=otel_knowledge.run,
-            description="useful for when you need to answer question about the OTEL Demo Architecture",
+            description="useful for when you need to answer question about the OTEL Demo Architecture. The tool takes Question as the input",
         ),
         Tool(
             name="PPL Query Generator",
