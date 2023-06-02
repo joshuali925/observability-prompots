@@ -3,6 +3,8 @@ from langchain.agents import ZeroShotAgent, AgentExecutor
 from langchain.chat_models import ChatAnthropic
 from agent_tools import create_tools
 from langchain.cache import SQLiteCache
+from langchain.chains.router import MultiPromptChain
+from base_llm import BaseModel
 
 from base_llm import BaseModel
 
@@ -23,6 +25,8 @@ You have access to the following tools:"""
 
 prompt = ZeroShotAgent.create_prompt(tools, prefix=prefix)
 
+basemodel = BaseModel(model_name="openai")
+llm = basemodel.get_model()
 
 llm_chain = LLMChain(llm=BaseModel().get_model(), prompt=prompt)
 agent = ZeroShotAgent(llm_chain=llm_chain, tools=tools, verbose=True)

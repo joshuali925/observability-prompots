@@ -66,27 +66,25 @@ summarize_text_chain = LLMChain(
 def create_tools():
     tools = [
         Tool(
-            name="Schema knowledge",
+            name="OTEL Demo knowledge",
             func=otel_knowledge.run,
-            # func=lambda x: "The index name for traces and spans is 'jaeger-span-*'. The field name for service is 'process.serviceName', the field name for latency is 'duration'. The field value for Fraud Detection service is 'frauddetection'",
-            description="useful for when you need to get values for placeholders in a query. The tool takes descriptions of multiple placeholders",
-            # return_direct=True,
+            description="useful for when you need to answer question about the OTEL Demo Architecture. The tool takes Question as the input",
         ),
-        # Tool(
-        #     name="PPL Query Generator",
-        #     func=lambda input_text: generate_ppl_query(input_text),
-        #     description="useful for when you need to generate OpenSearch PPL Query",
-        # ),
+        Tool(
+            name="PPL Query Generator",
+            func=lambda input_text: generate_ppl_query(input_text),
+            description="useful for when you need to generate OpenSearch PPL Query. This tool takes question as the input for PPL Query generation",
+        ),
         Tool(
             name="Execute PPL Query",
-            func=lambda ppl_query: exit(0),  # execute_ppl_query(ppl_query),
+            func=lambda ppl_query: execute_ppl_query(ppl_query),
             description="useful for when you need to execute the OpenSearch PPL Query. This tool takes PPL Query as the input",
         ),
-        # Tool(
-        #     name="Summarization",
-        #     func=summarize_text_chain,
-        #     description="useful for when you need to frame a final answer as response, input should be in format text: input",
-        # ),
+        Tool(
+            name="Summarization",
+            func=summarize_text_chain,
+            description="useful for when you need to frame a final answer as response, input should be in format text: input",
+        ),
     ]
 
     return tools
