@@ -88,7 +88,6 @@ Question: {question}
 response_schemas = [ResponseSchema(name="query", description="This a PPL query")]
 output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
 format_instructions = output_parser.get_format_instructions()
-print('❗format_instructions:', format_instructions)
 
 prompt = ChatPromptTemplate(
     messages=[
